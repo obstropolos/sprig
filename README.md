@@ -1,7 +1,12 @@
 # Sprigbot 
 
-The following is a Sprig slackbot proof of concept that I will 
-keep building in Python until I figure out how to make it Rust. 
+The following is a Sprig slackbot that tracks GitHub PRs,  
+lists them based on review status, and pings users based
+on those needing review or those ready to merge. 
+
+### To Dos
+- [ ] Add a refresh to avoid cached items getting stale
+- [ ] Add assignment capabilities to tag slack members 
 
 ## Functional Requirements 
 - Flask 

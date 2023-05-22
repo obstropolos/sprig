@@ -1,8 +1,8 @@
 # Sprigbot 
 
-The following is a Sprig slackbot that tracks GitHub PRs,  
-lists them based on review status, and pings users based
-on those needing review or those ready to merge. 
+The following is a Sprig slackbot that tracks GitHub PRs, lists them 
+based on review status, and pings users basedon those needing review 
+or those ready to merge. 
 
 ### To Dos
 - [ ] Add a refresh to avoid cached items getting stale

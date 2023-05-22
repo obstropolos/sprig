@@ -18,14 +18,21 @@ client = WebClient(token=slack_token, ssl=ssl_context)
 # Github token
 g = Github(os.environ["GITHUB_TOKEN"])
 
-# PR list
-pr_list = []
+# PR cache
+pr_cache = {}
 
-# Add method
 @app.route('/sprig/add', methods=['POST'])
 def add_pr():
     text = request.form.get('text')
-    pr_list.append(text)
+    
+    # Fetch PR details and store them in the cache
+    repo_name = extract_repo_name(text)
+    if repo_name:
+        pr_number = extract_pr_number(text)
+        if pr_number:
+            repo = g.get_repo(repo_name)
+            pr = repo.get_pull(pr_number)
+            pr_cache[text] = get_pr_status(pr)
     
     # Send confirmation message to Slack
     channel_id = request.form.get('channel_id')
@@ -36,32 +43,21 @@ def add_pr():
 # List PRs
 @app.route('/sprig/list', methods=['POST'])
 def list_prs():
+    if not pr_cache:
+        # Send message to Slack
+        channel_id = request.form.get('channel_id')
+        send_message(channel_id, "There are currently no PRs in the list.")
+        return Response(), 200
+
     attachments = []
-    for pr_url in pr_list:
-        repo_name = extract_repo_name(pr_url)
-        if repo_name:
-            pr_number = extract_pr_number(pr_url)
-            if pr_number:
-                repo = g.get_repo(repo_name)
-                pr = repo.get_pull(pr_number)
-    
-                # Check status
-                reviews = pr.get_reviews()
-                status = ":red_circle:"
-                for review in reviews:
-                    if review.state == "APPROVED":
-                        status = ":large_green_circle:"
-                        break
-                    elif review.state == "CHANGES_REQUESTED":
-                        status = ":yellow_circle:"
-    
-                attachments.append({
-                    "text": f"{status} {pr.html_url}"
-                })
+    for pr_url, status in pr_cache.items():
+        attachments.append({
+            "text": f"{status} {pr_url}"
+        })
     
     try:
         response = client.chat_postMessage(
-            channel="#general",
+            channel="#newnew",
             text="PR List:",
             attachments=attachments
         )
@@ -71,6 +67,37 @@ def list_prs():
         print(f"Slack API error: {e.response['error']}")
     
     return Response(), 200
+
+# Clear PR
+@app.route('/sprig/clear', methods=['POST'])
+def clear_pr():
+    text = request.form.get('text')
+    
+    if text not in pr_cache:
+        # Send message to Slack
+        channel_id = request.form.get('channel_id')
+        send_message(channel_id, f"That PR {text} isn't on this list.")
+    else:
+        # Remove PR from the cache
+        del pr_cache[text]
+        
+        # Send message to Slack
+        channel_id = request.form.get('channel_id')
+        send_message(channel_id, f"PR {text} removed!")
+
+    return Response(), 200
+
+# Helper functions
+def get_pr_status(pr):
+    reviews = pr.get_reviews()
+    status = ":red_circle:"
+    for review in reviews:
+        if review.state == "APPROVED":
+            status = ":large_green_circle:"
+            break
+        elif review.state == "CHANGES_REQUESTED":
+            status = ":yellow_circle:"
+    return status
 
 def extract_repo_name(pr_url):
     # Extract the repository name from the PR URL
@@ -99,14 +126,3 @@ def send_message(channel_id, text):
         assert response["ok"]
     except SlackApiError as e:
         print(f"Slack API error: {e.response['error']}")
-
-@app.route('/github/webhook', methods=['POST'])
-def github_webhook():
-    data = request.json
-    action = data['action']
-    pr_url = data['pull_request']['html_url']
-    
-    if action == 'closed' and pr_url in pr_list:
-        pr_list.remove(pr_url)
-        
-    return Response(), 200

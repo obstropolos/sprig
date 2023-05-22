@@ -26,10 +26,12 @@ instance at whatever port you want by running `ngrok http <port#>`
 and add your ngrok URL as a redirect URL. Once done, you should be able
 to obtain a "Bot User OAuth Token" which is required to run Sprigbot. 
 
-- After that, set up your `add` and `list` slash commands by going to
+- After that, set up your `add`, `clear`, and `list` slash commands by going to
 the `Slash Commands` menu in the Slack interface. 
     - For `add`, create a new command with `/add` as the command, and
     `https://<your ngrok url>/sprig/add` as the Request URL. 
+    - For `clear`, create a new command with `/clear` as the command, and 
+    `https://<your ngrok url>/sprig/clear` as the Request URL. 
     - For `list`, create a new command with `/add` as the command, and 
     `https://<your ngrok url>/sprig/list` as the Request URL.
     - Note: the additional hints and info can be anything you want here.

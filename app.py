@@ -25,24 +25,41 @@ pr_cache = {}
 def add_pr():
     text = request.form.get('text')
     
-    # Fetch PR details and store them in the cache
-    repo_name = extract_repo_name(text)
-    if repo_name:
-        pr_number = extract_pr_number(text)
-        if pr_number:
+    # Check if it's a PR URL or a repository URL
+    if "/pull/" in text:
+        # It's a PR URL
+        repo_name = extract_repo_name(text)
+        if repo_name:
+            pr_number = extract_pr_number(text)
+            if pr_number:
+                repo = g.get_repo(repo_name)
+                pr = repo.get_pull(pr_number)
+                pr_cache[text] = get_pr_status(pr)
+        
+        # Send confirmation message to Slack
+        channel_id = request.form.get('channel_id')
+        send_message(channel_id, f"PR {text} has been added to the list.")
+    else:
+        # It's a repository URL
+        repo_name = extract_repo_name_from_repo_url(text)
+        if repo_name:
             repo = g.get_repo(repo_name)
-            pr = repo.get_pull(pr_number)
-            pr_cache[text] = get_pr_status(pr)
-    
-    # Send confirmation message to Slack
-    channel_id = request.form.get('channel_id')
-    send_message(channel_id, f"PR {text} has been added to the list.")
+            open_prs = repo.get_pulls(state='open')
+            for pr in open_prs:
+                pr_url = construct_pr_url(repo_name, pr.number)
+                pr_cache[pr_url] = get_pr_status(pr)
+            
+            # Send confirmation message to Slack
+            channel_id = request.form.get('channel_id')
+            send_message(channel_id, f"All open PRs from {text} have been added to the list.")
     
     return Response(), 200
 
 # List PRs
 @app.route('/sprig/list', methods=['POST'])
 def list_prs():
+    channel_id = request.form.get('channel_id')
+
     if not pr_cache:
         # Send message to Slack
         channel_id = request.form.get('channel_id')
@@ -57,7 +74,7 @@ def list_prs():
     
     try:
         response = client.chat_postMessage(
-            channel="#newnew",
+            channel=channel_id,
             text="PR List:",
             attachments=attachments
         )
@@ -140,6 +157,17 @@ def extract_pr_number(pr_url):
         return int(parts[6])
     
     return None
+
+def extract_repo_name_from_repo_url(repo_url):
+    # Extract the repository name from the repository URL
+    parts = repo_url.split('/')
+    if len(parts) >= 5:
+        return f"{parts[3]}/{parts[4]}"
+    return None
+
+def construct_pr_url(repo_name, pr_number):
+    # Construct the PR URL using the repository name and the PR number
+    return f"https://github.com/{repo_name}/pull/{pr_number}"
 
 def send_message(channel_id, text):
     try:

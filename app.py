@@ -87,16 +87,40 @@ def clear_pr():
 
     return Response(), 200
 
+# Refresh cache
+@app.route('/sprig/refresh', methods=['POST'])
+def refresh_cache():
+    for pr_url in list(pr_cache.keys()):  # Use list to avoid RuntimeError due to size change during iteration
+        repo_name = extract_repo_name(pr_url)
+        if repo_name:
+            pr_number = extract_pr_number(pr_url)
+            if pr_number:
+                repo = g.get_repo(repo_name)
+                pr = repo.get_pull(pr_number)
+                pr_cache[pr_url] = get_pr_status(pr)
+    
+    # Send confirmation message to Slack
+    channel_id = request.form.get('channel_id')
+    send_message(channel_id, "PR statuses have now been updated.")
+    
+    return Response(), 200
+
 # Helper functions
 def get_pr_status(pr):
-    reviews = pr.get_reviews()
+    reviews = pr.get_reviews().reversed  # reversed to get the latest reviews first
     status = ":red_circle:"
     for review in reviews:
+        # Ignore reviews by the PR author
+        if review.user.login == pr.user.login:
+            continue
+        # Ignore comments and pending reviews
+        if review.state not in ["APPROVED", "CHANGES_REQUESTED"]:
+            continue
+        # Return the status based on the latest relevant review
         if review.state == "APPROVED":
-            status = ":large_green_circle:"
-            break
+            return ":large_green_circle:"
         elif review.state == "CHANGES_REQUESTED":
-            status = ":yellow_circle:"
+            return ":large_yellow_circle:"
     return status
 
 def extract_repo_name(pr_url):

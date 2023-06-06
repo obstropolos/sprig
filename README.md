@@ -5,14 +5,15 @@ lists them based on review status, and pings users based
 on those needing review or those ready to merge. 
 
 ### To Dos
-- [ ] Add a refresh to avoid cached items getting stale
-- [ ] Add assignment capabilities to tag slack members 
+- Add assignment capabilities to tag slack members
+- Add the ability to add all PRs from a single repo 
 
 ## Functional Requirements 
 - Flask 
 - Python 3+ 
 - A Slack workspace 
-- ngrok (if testing locally)
+
+These instructions use ngrok for testing.
 
 ## API Requirements
 - Slack OAUTH token (obtained in this guide)
@@ -31,34 +32,29 @@ instance at whatever port you want by running `ngrok http <port#>`
 and add your ngrok URL as a redirect URL. Once done, you should be able
 to obtain a "Bot User OAuth Token" which is required to run Sprigbot. 
 
-- After that, set up your `add`, `clear`, and `list` slash commands by going to
-the `Slash Commands` menu in the Slack interface. 
-    - For `add`, create a new command with `/add` as the command, and
-    `https://<your ngrok url>/sprig/add` as the Request URL. 
-    - For `clear`, create a new command with `/clear` as the command, and 
-    `https://<your ngrok url>/sprig/clear` as the Request URL. 
-    - For `list`, create a new command with `/add` as the command, and 
-    `https://<your ngrok url>/sprig/list` as the Request URL.
-    - Note: the additional hints and info can be anything you want here.
+- After that, set up your `add`, `clear`, `refresh`, and `list` slash 
+commands by going to the `Slash Commands` menu in the Slack interface. 
+    - For each command, create a new command with the name as the 
+    command, and `https://<your ngrok url>/sprig/add` as the Request URL. 
 
 - Finally, make sure to give the bot some permissions in your Slack 
 workspace by going to the `OAuth & Permissions` menu in the Slack interface
 scrolling down to `Scopes` and adding permissions for `chat:write`, 
 `commands`, `incoming-webhook`, `links:read`, and `links:write`.
 
-Alright now it's time to boot this up. Go to the folder with `app.py` in it
-and run the following: 
-
-```
-pip3 install slack_sdk PyGithub
-```
-
-Before running this application, make sure to set your tokens up via the 
+Before running this bot, make sure to set your tokens up via the 
 following commands:
 
 ```
 export SLACK_BOT_TOKEN=<your Slack OAUTH token> 
 export GITHUB_TOKEN=<your GitHub API key>  
+```
+
+Alright now it's time to boot this up. Go to the folder with `app.py` in it
+and run the following: 
+
+```
+pip3 install slack_sdk PyGithub
 ```
 
 Now run this app on the same specified port you had for ngrok by running the
@@ -77,5 +73,7 @@ the following commands:
 - `/list` which lists all added PRs, with review status indicated by a color.
 Green means it's approved, red means there's no reviews, and yellow means
 changes have been requested.
+- `/clear <GitHub PR link>` to remove a PR from your list. 
+- `/refresh` to refresh the statuses of the PRs. 
 
 Any PRs closed or merged should be removed from Sprig. 

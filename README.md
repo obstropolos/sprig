@@ -1,12 +1,10 @@
 # Sprigbot 
 
-The following is a Sprig slackbot that tracks GitHub PRs, lists them 
-based on review status, and pings users based on those needing review 
-or those ready to merge. 
+The following is a slackbot called "Sprig" that tracks GitHub PRs, and lists 
+them based on status.
 
 ### To Dos
 - Add assignment capabilities to tag slack members
-- Add the ability to add all PRs from a single repo 
 
 ## Functional Requirements 
 - Flask 
